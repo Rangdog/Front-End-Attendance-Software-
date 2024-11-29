@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Container, Typography, Button, Grid, Alert } from "@mui/material";
+import {
+  Container,
+  Typography,
+  Button,
+  Grid,
+  Alert,
+  Stack,
+  Box,
+  Card,
+} from "@mui/material";
 import * as faceapi from "face-api.js";
 import { checkCheckIntoday, getAllAddress, checkIfOnLeave } from "../api/api";
 
@@ -311,7 +320,6 @@ const FaceDetection = () => {
         // Set up FormData and append the captured image as "faceImage"
         const formData = new FormData();
         formData.append("faceImage", blob, "capture.jpg");
-        console.log(attendance.id);
         if (attendance != null) {
           formData.append("attendanceId", attendance.id);
         } else {
@@ -350,19 +358,46 @@ const FaceDetection = () => {
     }
   };
   return (
-    <Container maxWidth="sm">
-      <Typography variant="h4" gutterBottom>
-        Face Detection for Check-In
-      </Typography>
-      {error && <Alert severity="error">{error}</Alert>}
-      {success && <Alert severity="success">{success}</Alert>}
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <div style={{ position: "relative", width: "100%", height: "auto" }}>
+    <Container maxWidth="md">
+      <Card
+        style={{
+          padding: "20px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+        }}
+      >
+        <Typography variant="h4" align="center" gutterBottom>
+          Face Detection for Check-In
+        </Typography>
+        {error && <Alert severity="error">{error}</Alert>}
+        {success && <Alert severity="success">{success}</Alert>}
+
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap={2}
+          mt={3}
+        >
+          <Box
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "600px",
+              aspectRatio: "16/9",
+              borderRadius: "12px",
+              overflow: "hidden",
+              border: "2px solid rgba(0,0,0,0.2)",
+            }}
+          >
             <video
               ref={videoRef}
               autoPlay
-              style={{ width: "100%", borderRadius: "8px" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
             />
             <canvas
               ref={canvasRef}
@@ -370,56 +405,78 @@ const FaceDetection = () => {
                 position: "absolute",
                 top: 0,
                 left: 0,
+                width: "100%",
+                height: "100%",
                 borderRadius: "8px",
               }}
             />
-          </div>
-          <Button
-            variant="contained"
-            onClick={startCamera}
-            style={{ marginTop: "10px" }}
-          >
-            Start Camera
-          </Button>
-          <Button
-            variant="contained"
-            onClick={stopCamera}
-            style={{ marginTop: "10px", marginLeft: "10px" }}
-            disabled={!stream}
-          >
-            Stop Camera
-          </Button>
-        </Grid>
-        <Grid item xs={12}>
+          </Box>
+
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={startCamera}
+              style={{ padding: "10px 20px" }}
+            >
+              Start Camera
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={stopCamera}
+              disabled={!stream}
+              style={{ padding: "10px 20px" }}
+            >
+              Stop Camera
+            </Button>
+          </Stack>
+
           {!isFinish ? (
-            // Kiểm tra nếu isFinish là false
             !isCheckinToday ? (
               <Button
                 variant="contained"
+                color="success"
                 onClick={handleCheckIn}
-                disabled={!isFaceInFrame || !nearCom || isOnLeave} // Disabled nếu không có khuôn mặt trong khung hình
-                style={{ marginTop: "10px" }}
+                disabled={!isFaceInFrame || !nearCom || isOnLeave}
+                style={{
+                  padding: "10px 20px",
+                  marginTop: "10px",
+                  fontWeight: "bold",
+                }}
               >
                 Check In
               </Button>
             ) : (
               <Button
                 variant="contained"
+                color="warning"
                 onClick={handleCheckout}
-                disabled={!isFaceInFrame || !nearCom || isOnLeave} // Disabled nếu không có khuôn mặt trong khung hình
-                style={{ marginTop: "10px" }}
+                disabled={!isFaceInFrame || !nearCom || isOnLeave}
+                style={{
+                  padding: "10px 20px",
+                  marginTop: "10px",
+                  fontWeight: "bold",
+                }}
               >
                 Check Out
               </Button>
             )
           ) : (
-            // Nếu isFinish là true, hiển thị thông báo đã hoàn thành
-            <Typography variant="body1" style={{ marginTop: "10px" }}>
-              Bạn đã hoàn thành checkIn và checkOut hôm nay
+            <Typography
+              variant="h6"
+              align="center"
+              style={{
+                color: "green",
+                marginTop: "20px",
+                fontWeight: "bold",
+              }}
+            >
+              You have completed Check-In and Check-Out today!
             </Typography>
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      </Card>
     </Container>
   );
 };

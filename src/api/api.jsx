@@ -26,7 +26,9 @@ export const checkIn = async (attendance, token) => {
 // Hàm chấm công check-out
 export const checkOut = async (attendance, token) => {
   return await api.post("/attendance/checkout", attendance, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 };
 
@@ -303,6 +305,45 @@ export const createSalary = async (data, token) => {
 export const getCurrentSalary = async (userId, token) => {
   try {
     const response = await api.get(`/salaries/current/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const registerFingerprints = async (data, token) => {
+  try {
+    const response = await api.post(`/users/register-fingerprint`, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const checkInFinger = async (data, userId, token) => {
+  try {
+    const response = await api.post(`/users/check-in-finger/${userId}`, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const checkOutFinger = async (data, userId, token) => {
+  try {
+    const response = await api.post(`/users/check-out-finger/${userId}`, data, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;

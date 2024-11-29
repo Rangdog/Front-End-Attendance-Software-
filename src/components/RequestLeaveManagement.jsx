@@ -10,15 +10,24 @@ import {
   Paper,
   Button,
   Typography,
+  Snackbar,
+  Alert,
+  Box,
+  CircularProgress,
 } from "@mui/material";
 import { getALLRequestLeave, rejectRequest, approveRequest } from "../api/api";
 
 const RequestLeaveManagement = () => {
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const token = localStorage.getItem("token");
 
   // Cập nhật hàm approve với async/await và xử lý state sau khi duyệt
   const handleApprove = async (id) => {
+    setLoading(true);
     try {
       // Gọi API duyệt yêu cầu
       await approveRequest(id, token);
@@ -29,30 +38,48 @@ const RequestLeaveManagement = () => {
           request.id === id ? { ...request, approve: true } : request
         )
       );
+      setSnackbarMessage("Yêu cầu đã được duyệt!");
+      setSnackbarSeverity("success");
     } catch (error) {
       console.error("Error approving request:", error);
+      setSnackbarMessage("Có lỗi khi duyệt yêu cầu!");
+      setSnackbarSeverity("error");
+    } finally {
+      setLoading(false);
+      setOpenSnackbar(true);
     }
   };
 
   const handleReject = async (id) => {
+    setLoading(true);
     try {
       await rejectRequest(id, token);
 
-      // Lấy lại dữ liệu từ API nếu cần thiết
+      // Lấy lại dữ liệu từ API sau khi từ chối yêu cầu
       const data = await getALLRequestLeave(token);
       setRequests(data);
+      setSnackbarMessage("Yêu cầu đã bị từ chối!");
+      setSnackbarSeverity("warning");
     } catch (error) {
       console.error("Error rejecting request:", error);
+      setSnackbarMessage("Có lỗi khi từ chối yêu cầu!");
+      setSnackbarSeverity("error");
+    } finally {
+      setLoading(false);
+      setOpenSnackbar(true);
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const data = await getALLRequestLeave(token);
         setRequests(data);
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -62,32 +89,49 @@ const RequestLeaveManagement = () => {
   return (
     <Container>
       <Typography variant="h4" gutterBottom>
-        Request Leave Management
+        Quản Lý Yêu Cầu Nghỉ
       </Typography>
-      <TableContainer component={Paper}>
+
+      {loading && (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      <TableContainer component={Paper} sx={{ boxShadow: 3, borderRadius: 2 }}>
         <Table>
-          <TableHead>
+          <TableHead sx={{ backgroundColor: "#f4f6f8" }}>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>Start Time</TableCell>
-              <TableCell>End Time</TableCell>
-              <TableCell>Reason</TableCell>
+              <TableCell>Thời gian bắt đầu</TableCell>
+              <TableCell>Thời gian kết thúc</TableCell>
+              <TableCell>Lý do</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>Hành động</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {requests.map((request) => (
-              <TableRow key={request.id}>
+              <TableRow
+                key={request.id}
+                sx={{
+                  "&:hover": { backgroundColor: "#f1f1f1" },
+                  transition: "all 0.2s ease",
+                }}
+              >
                 <TableCell>{request.id}</TableCell>
-                <TableCell>{request.startTime}</TableCell>
-                <TableCell>{request.endTime}</TableCell>
+                <TableCell>
+                  {new Date(request.startTime).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  {new Date(request.endTime).toLocaleString()}
+                </TableCell>
                 <TableCell>{request.reason}</TableCell>
                 <TableCell>
                   {request.approve ? (
-                    <Typography color="green">Approved</Typography>
+                    <Typography color="green">Đã duyệt</Typography>
                   ) : (
-                    <Typography color="red">Pending</Typography>
+                    <Typography color="orange">Chờ duyệt</Typography>
                   )}
                 </TableCell>
                 <TableCell>
@@ -96,9 +140,9 @@ const RequestLeaveManagement = () => {
                       variant="contained"
                       color="primary"
                       onClick={() => handleApprove(request.id)}
-                      style={{ marginRight: 8 }}
+                      sx={{ mr: 2 }}
                     >
-                      Approve
+                      Duyệt
                     </Button>
                   )}
                   <Button
@@ -106,7 +150,7 @@ const RequestLeaveManagement = () => {
                     color="secondary"
                     onClick={() => handleReject(request.id)}
                   >
-                    Reject
+                    Từ chối
                   </Button>
                 </TableCell>
               </TableRow>
@@ -114,6 +158,20 @@ const RequestLeaveManagement = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setOpenSnackbar(false)}
+      >
+        <Alert
+          onClose={() => setOpenSnackbar(false)}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

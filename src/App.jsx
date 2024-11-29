@@ -14,6 +14,8 @@ import SalaryExportComponent from "./components/SalaryExportComponent";
 import AddressManager from "./components/AddressManager";
 import EmployeeTable from "./components/EmployeeTable";
 import PrivateRoute from "./components/PrivateRoute";
+import RegisterFingerprint from "./components/RegisterFingerprint";
+import AttendanceComponent from "./components/AttendanceComponentFingerprint";
 const App = () => {
   return (
     <Router>
@@ -64,6 +66,14 @@ const App = () => {
           <Route
             path="/employee-table"
             element={<PrivateRoute element={<EmployeeTable />} />}
+          />
+          <Route
+            path="/register-fingerprint"
+            element={<PrivateRoute element={<RegisterFingerprint />} />}
+          />
+          <Route
+            path="/recognize-fingerprint"
+            element={<PrivateRoute element={<AttendanceComponent />} />}
           />
         </Routes>
       </Container>

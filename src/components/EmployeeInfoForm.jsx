@@ -8,6 +8,8 @@ import {
   Select,
   InputLabel,
   FormControl,
+  Grid,
+  Paper,
 } from "@mui/material";
 import {
   checkExistEmployeeInfor,
@@ -42,7 +44,6 @@ const EmployeeInfoForm = () => {
             birthYear: response.birthYear || "",
             position: response.position,
           });
-          console.log(formData);
         }
       } catch (error) {
         console.error("Error fetching employee data:", error);
@@ -65,7 +66,7 @@ const EmployeeInfoForm = () => {
     setSuccessMessage("");
     const updatedFormData = {
       ...formData,
-      userId: userId, // Thêm userId vào formData trước khi gửi
+      userId: userId,
     };
     try {
       if (employeeId === null) {
@@ -73,17 +74,18 @@ const EmployeeInfoForm = () => {
       } else {
         const updatedFormDataUpdate = {
           ...updatedFormData,
-          id: employeeId, // Thêm userId vào formData trước khi gửi
+          id: employeeId,
         };
         await updateEmployee(updatedFormDataUpdate, token);
       }
-      await setSuccessMessage("Employee information updated successfully!");
+      setSuccessMessage("Employee information updated successfully!");
     } catch (error) {
       console.error("Error updating employee information:", error);
     } finally {
       setLoading(false);
     }
   };
+
   const handleDateChange = (e) => {
     const date = new Date(e.target.value);
     const formattedDate = date.toISOString().split("T")[0]; // Format to "yyyy-MM-dd"
@@ -91,65 +93,108 @@ const EmployeeInfoForm = () => {
   };
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      sx={{ maxWidth: 500, mx: "auto", p: 3, boxShadow: 3, borderRadius: 2 }}
+    <Grid
+      container
+      justifyContent="center"
+      sx={{ minHeight: "100vh", backgroundColor: "#f7f7f7" }}
     >
-      <Typography variant="h5" mb={3}>
-        Update Employee Information
-      </Typography>
-      <TextField
-        label="Full Name"
-        name="fullName"
-        value={formData.fullName}
-        onChange={handleInputChange}
-        fullWidth
-        margin="normal"
-        required
-      />
-      <TextField
-        label="Birth Year"
-        name="birthYear"
-        type="date"
-        value={formData.birthYear}
-        onChange={handleDateChange}
-        fullWidth
-        margin="normal"
-        required
-        InputLabelProps={{
-          shrink: true,
-        }}
-      />
-      <FormControl fullWidth margin="normal" required>
-        <InputLabel id="position-label">Position</InputLabel>
-        <Select
-          labelId="position-label"
-          name="position"
-          value={formData.position}
-          onChange={handleInputChange}
+      <Grid item xs={12} sm={8} md={6} lg={4}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            borderRadius: "10px",
+            backgroundColor: "#fff",
+            boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.1)",
+          }}
         >
-          <MenuItem value={0}>Nhân viên</MenuItem>
-          <MenuItem value={1}>Trưởng phòng</MenuItem>
-          <MenuItem value={2}>Quản lý</MenuItem>
-        </Select>
-      </FormControl>
-      <Button
-        type="submit"
-        variant="contained"
-        color="primary"
-        fullWidth
-        disabled={loading}
-        sx={{ mt: 2 }}
-      >
-        {loading ? "Saving..." : "Save Changes"}
-      </Button>
-      {successMessage && (
-        <Typography color="success.main" mt={2}>
-          {successMessage}
-        </Typography>
-      )}
-    </Box>
+          <Typography variant="h5" align="center" mb={2} color="primary.main">
+            Update Employee Information
+          </Typography>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+          >
+            <TextField
+              label="Full Name"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              fullWidth
+              margin="normal"
+              required
+              variant="outlined"
+              InputProps={{
+                sx: { borderRadius: "8px" },
+              }}
+            />
+            <TextField
+              label="Birth Year"
+              name="birthYear"
+              type="date"
+              value={formData.birthYear}
+              onChange={handleDateChange}
+              fullWidth
+              margin="normal"
+              required
+              variant="outlined"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              InputProps={{
+                sx: { borderRadius: "8px" },
+              }}
+            />
+            <FormControl fullWidth margin="normal" required variant="outlined">
+              <InputLabel id="position-label">Position</InputLabel>
+              <Select
+                labelId="position-label"
+                name="position"
+                value={formData.position}
+                onChange={handleInputChange}
+                label="Position"
+                sx={{
+                  borderRadius: "8px",
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                  },
+                }}
+              >
+                <MenuItem value={0}>Nhân viên</MenuItem>
+                <MenuItem value={1}>Trưởng phòng</MenuItem>
+                <MenuItem value={2}>Quản lý</MenuItem>
+              </Select>
+            </FormControl>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              disabled={loading}
+              sx={{
+                mt: 2,
+                borderRadius: "8px",
+                padding: "10px",
+                fontWeight: "bold",
+              }}
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
+            {successMessage && (
+              <Typography
+                color="success.main"
+                mt={2}
+                variant="body2"
+                align="center"
+              >
+                {successMessage}
+              </Typography>
+            )}
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
   );
 };
 
