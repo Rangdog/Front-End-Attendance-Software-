@@ -24,6 +24,7 @@ const Register = () => {
   const [userData, setUserData] = useState({
     userName: "",
     password: "",
+    confirmPassword: "",
     role: "USER",
   });
   const [employeeData, setEmployeeData] = useState({
@@ -63,26 +64,27 @@ const Register = () => {
 
   // Handle user registration
   const handleRegister = async (e) => {
-    
     e.preventDefault();
     setLoading(true);
+    if (userData.password !== userData.confirmPassword) {
+      setError("Mật khẩu và nhập lại mật khẩu không khớp.");
+      setLoading(false);
+      return;
+    }
+    const { confirmPassword, ...dataToSubmit } = userData;
     try {
       // Register user
-      const registeredUser = await registerUser(userData);
-      localStorage.setItem("userId", registeredUser.userId);
-
+      const registeredUser = await registerUser(dataToSubmit);
+      console.log(registeredUser);
       // Save employee information
       const employeePayload = {
         ...employeeData,
-        userId: registeredUser.userId,
+        userId: registeredUser.data.id,
       };
-      if (employeeId === null) {
-        await createEmployee(employeePayload, token);
-      } else {
-        await updateEmployee({ ...employeePayload, id: employeeId }, token);
-      }
-      setSuccessMessage("User and employee information saved successfully!");
-      setTimeout(() => navigate("/login"), 2000);
+      console.log(employeePayload);
+      await createEmployee(employeePayload, token);
+      setSuccessMessage("Đăng ký thành công");
+      // setTimeout(() => navigate("/"), 2000);
     } catch (err) {
       setError(`Đăng ký không thành công. Vui lòng thử lại. ${err.message}`);
     } finally {
@@ -164,6 +166,20 @@ const Register = () => {
                 sx: { borderRadius: "8px" },
               }}
             />
+            <TextField
+              label="Nhập lại mật khẩu"
+              type="password"
+              name="confirmPassword"
+              value={userData.confirmPassword}
+              onChange={handleUserInputChange}
+              fullWidth
+              margin="normal"
+              required
+              variant="outlined"
+              InputProps={{
+                sx: { borderRadius: "8px" },
+              }}
+            />
             <FormControl fullWidth margin="normal" required variant="outlined">
               <InputLabel id="role-label">Vai trò</InputLabel>
               <Select
@@ -179,7 +195,7 @@ const Register = () => {
                   },
                 }}
               >
-                <MenuItem value="USER">Người dùng</MenuItem>
+                <MenuItem value="USER">Nhân viên</MenuItem>
                 <MenuItem value="ADMIN">Quản trị viên</MenuItem>
               </Select>
             </FormControl>

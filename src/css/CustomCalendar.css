@@ -9,3 +9,51 @@
   color: white !important;
   border-radius: 50%;
 }
+
+.tile-missing {
+  background-color: #ffcccc !important; /* Màu đỏ lừ */
+  color: #d32f2f; /* Chữ đỏ đậm */
+  border-radius: 8px; /* Bo góc nhẹ */
+  border: 1px solid #d32f2f;
+}
+
+.tile-missing:hover {
+  background-color: #ffaaaa !important; /* Màu sáng hơn khi hover */
+}
+
+.react-calendar__tile.highlighted-day {
+  background: #ffb74d; /* Màu nền nổi bật */
+  color: #fff; /* Màu chữ */
+  border-radius: 50%;
+}
+.react-calendar__tile.highlighted-day:hover {
+  background: #ffa726;
+}
+
+/* Màu cho trạng thái chờ duyệt (approve = 0) */
+.approve-pending {
+  background-color: #ffc107; /* Màu vàng */
+  color: white;
+  border-radius: 50%;
+}
+
+/* Màu cho trạng thái đã duyệt (approve = 1) */
+.approve-approved {
+  background-color: #28a745; /* Màu xanh lá */
+  color: white;
+  border-radius: 50%;
+}
+
+/* Màu cho trạng thái từ chối (approve = 2) */
+.approve-rejected {
+  background-color: #dc3545; /* Màu đỏ */
+  color: white;
+  border-radius: 50%;
+}
+
+/* Màu cho trạng thái hủy (approve = 3) */
+.approve-canceled {
+  background-color: #0022ff; /* Màu xám */
+  color: white;
+  border-radius: 50%;
+}

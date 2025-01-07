@@ -11,7 +11,8 @@ import {
 } from "@mui/material";
 import * as faceapi from "face-api.js";
 import { checkCheckIntoday, getAllAddress, checkIfOnLeave } from "../api/api";
-
+import CheckinModal from "./CheckinModal";
+import { useNavigate } from "react-router-dom";
 const FaceDetection = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -25,10 +26,30 @@ const FaceDetection = () => {
   const canvasRef = useRef(null);
   const token = localStorage.getItem("token"); // Assuming you store the token in localStorage
   const userId = localStorage.getItem("userId");
+  const employeeId = localStorage.getItem("employeeId");
   const [addresses, setAddresses] = useState([]);
   const [userLocation, setUserLocation] = useState([21.0285, 105.8542]); // Hà Nội mặc định
   const [nearCom, setNearCom] = useState(false);
   const [isOnLeave, setIsOnLeave] = useState(false);
+  const [isAutoCheckinRunning, setIsAutoCheckinRunning] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [openModal, setOpenModal] = useState(false);
+  const [employeeName, setEmployeeName] = useState("");
+  const [checkinTime, setCheckinTime] = useState("");
+  const [imagecheckin, setImagecheckin] = useState("");
+  const [title, setTitle] = useState("");
+  const navigate = useNavigate();
+  const handleCheckinSuccess = (name, time, image, title) => {
+    setEmployeeName(name);
+    setCheckinTime(time);
+    setImagecheckin(image);
+    setTitle(title);
+    setOpenModal(true);
+  };
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    navigate("/attendance");
+  };
 
   useEffect(() => {
     const loadModels = async () => {
@@ -38,13 +59,10 @@ const FaceDetection = () => {
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         ]);
-        console.log("Models loaded successfully");
         setModelsLoaded(true);
       } catch (err) {
         console.error("Failed to load models:", err);
-        setError(
-          "Error loading models. Please check the directory structure and try again."
-        );
+        setError("Có lỗi vui lòng tải lại trang");
       }
     };
 
@@ -60,6 +78,11 @@ const FaceDetection = () => {
         },
         (error) => {
           console.error("Error fetching user location:", error);
+        },
+        {
+          enableHighAccuracy: true, // Yêu cầu độ chính xác cao
+          timeout: 10000, // Thời gian chờ tối đa (ms)
+          maximumAge: 0, // Không sử dụng dữ liệu cũ
         }
       );
     } else {
@@ -105,16 +128,14 @@ const FaceDetection = () => {
         address.longitude // kinh độ địa chỉ
       );
       console.log(distance);
-
-      if (distance <= 300) {
-        console.log("Địa chỉ trong phạm vi 300:", address.address);
+      if (distance <= 1500) {
         setNearCom(true);
       }
     });
   }, [userLocation, addresses]);
   useEffect(() => {
     const fetchData = async () => {
-      const data = await checkCheckIntoday(userId, token); // Dùng await để chờ kết quả từ API
+      const data = await checkCheckIntoday(employeeId, token); // Dùng await để chờ kết quả từ API
       if (data === "") {
         return;
       }
@@ -130,14 +151,14 @@ const FaceDetection = () => {
     fetchData(); // Gọi hàm bất đồng bộ để lấy dữ liệu
   }, []); // Thêm dependencies để hàm chạy lại khi userId hoặc token thay đổi
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await checkIfOnLeave(userId, token); // Dùng await để chờ kết quả từ API
-      setIsOnLeave(data);
-    };
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const data = await checkIfOnLeave(employeeId, token); // Dùng await để chờ kết quả từ API
+  //     setIsOnLeave(data);
+  //   };
 
-    fetchData(); // Gọi hàm bất đồng bộ để lấy dữ liệu
-  }, []); // Thêm dependencies để hàm chạy lại khi userId hoặc token thay đổi
+  //   fetchData(); // Gọi hàm bất đồng bộ để lấy dữ liệu
+  // }, []); // Thêm dependencies để hàm chạy lại khi userId hoặc token thay đổi
 
   const startCamera = async () => {
     try {
@@ -151,11 +172,13 @@ const FaceDetection = () => {
         if (modelsLoaded) {
           detectFace();
         } else {
-          setError("Models not loaded. Please try again later.");
+          setError("Có lỗi vui lòng tải lại trang");
         }
       };
     } catch (err) {
-      setError("Unable to access camera: " + err.message);
+      setError(
+        "Lỗi camera vui lòng kiểm tra lại camera của bạn " + err.message
+      );
     }
   };
 
@@ -176,7 +199,7 @@ const FaceDetection = () => {
     const canvas = canvasRef.current;
 
     if (!video.videoWidth || !video.videoHeight) {
-      setError("Cannot retrieve video dimensions.");
+      setError("Có lỗi vui lòng thử lại");
       return;
     }
 
@@ -232,64 +255,106 @@ const FaceDetection = () => {
     }, 500);
   };
 
-  const handleCheckIn = async () => {
+  const handleCheckIn = async (interval) => {
     try {
-      // Draw the current video frame to the canvas
       const canvas = canvasRef.current;
       const video = videoRef.current;
 
       if (!canvas || !video) {
         setError("Error accessing video or canvas element.");
-        return;
+        return false;
       }
 
-      // Set canvas dimensions to match the video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas content to a Blob
       canvas.toBlob(async (blob) => {
         if (!blob) {
           setError("Failed to capture image from video.");
-          return;
+          return false;
         }
 
-        // Set up FormData and append the captured image as "faceImage"
         const formData = new FormData();
         formData.append("faceImage", blob, "capture.jpg");
-        console.log(userId);
+
         const response = await fetch(
-          `http://localhost:8080/api/users/check-in/${userId}`,
+          `http://localhost:8080/api/users/check-in/${employeeId}`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${token}`, // Use token from localStorage
+              Authorization: `Bearer ${token}`,
             },
             body: formData,
           }
         );
-        const data = await response.text();
-        const jsonData = JSON.parse(data); // Chuyển đổi thành object
-        console.log(jsonData);
-        if (response.ok) {
-          setSuccess(
-            `Xác minh thành công ${jsonData.label}, Distance: ${jsonData.distance}`
-          );
-          setError(``);
+        if (response.status === 200) {
+          const data = await response.text();
+          const jsonData = JSON.parse(data);
+          console.log(jsonData);
+          setError("");
           setisCheckinToday(true);
-        } else {
-          setSuccess(``);
-          setError(
-            `Xác minh thất bại vui lòng thử lại: ${jsonData.label}, Distance: ${jsonData.distance}`
+          clearInterval(interval);
+          const fetchData = async () => {
+            const data = await checkCheckIntoday(employeeId, token); // Dùng await để chờ kết quả từ API
+            if (data === "") {
+              return;
+            }
+            setAttendance(data);
+            if (data.checkIn !== "") {
+              setisCheckinToday(true);
+            }
+            if (data.checkOut !== "") {
+              setIsFinish(true);
+            }
+          };
+          fetchData(); // Gọi hàm bất đồng bộ để lấy dữ liệu
+          const currentTime = new Date().toLocaleTimeString("vi-VN"); // Lấy giờ hiện tại
+          handleCheckinSuccess(
+            jsonData.name,
+            currentTime,
+            jsonData.image,
+            "Chấm công vào thành công"
           );
+          return true;
+        } else {
+          setError(`Xác minh thất bại, vui lòng thử lại!`);
+          setSuccess("");
+          return false;
         }
-      }, "image/jpeg"); // Capture as JPEG format
+      }, "image/jpeg");
+
+      return false;
     } catch (err) {
       setError(`An error occurred during recognition: ${err.message}`);
+      return false;
     }
+  };
+
+  const handleAutoCheckIn = async () => {
+    setIsAutoCheckinRunning(true);
+    setAttemptCount(0);
+    let cnt = 0;
+    const interval = setInterval(async () => {
+      if (cnt >= 10) {
+        setError("chấm công vào thất bại. Vui lòng thử lại.");
+        setIsAutoCheckinRunning(false);
+        clearInterval(interval);
+        return;
+      }
+
+      const success = await handleCheckIn(interval);
+      cnt += 1;
+      if (success) {
+        setIsAutoCheckinRunning(false);
+        clearInterval(interval);
+        return;
+      }
+
+      setAttemptCount((prev) => prev + 1);
+    }, 1000); // Chạy mỗi giây
   };
 
   const handleCheckout = async () => {
@@ -328,7 +393,7 @@ const FaceDetection = () => {
         }
         // formData.append("attendanceId", attachmentId);
         const response = await fetch(
-          `http://localhost:8080/api/users/check-out/${userId}`,
+          `http://localhost:8080/api/users/check-out/${employeeId}`,
           {
             method: "POST",
             headers: {
@@ -341,11 +406,19 @@ const FaceDetection = () => {
         const jsonData = JSON.parse(data); // Chuyển đổi thành object
         console.log(jsonData);
         if (response.ok) {
+          const currentTime = new Date().toLocaleTimeString("vi-VN"); // Lấy giờ hiện tại
           setSuccess(
             `Xác minh thành công ${jsonData.label}, similarity: ${jsonData.distance}`
           );
           setError(``);
           setIsFinish(true);
+          console.log("âsdsad");
+          handleCheckinSuccess(
+            jsonData.name,
+            currentTime,
+            jsonData.image,
+            "Chấm công ra thành công thành công"
+          );
         } else {
           setSuccess(``);
           setError(
@@ -358,36 +431,64 @@ const FaceDetection = () => {
     }
   };
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ mt: 5 }}>
+      <CheckinModal
+        open={openModal}
+        handleClose={handleCloseModal}
+        image={imagecheckin}
+        name={employeeName}
+        time={checkinTime}
+        title={title}
+      />
       <Card
-        style={{
-          padding: "20px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+        sx={{
+          padding: 4,
+          borderRadius: 3,
+          boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+          background: "linear-gradient(135deg, #f5f7fa, #ffffff)",
         }}
       >
-        <Typography variant="h4" align="center" gutterBottom>
-          Face Detection for Check-In
+        <Typography
+          variant="h4"
+          align="center"
+          gutterBottom
+          sx={{
+            fontWeight: "bold",
+            color: "#1976d2",
+          }}
+        >
+          Chấm công bằng khuôn mặt
         </Typography>
-        {error && <Alert severity="error">{error}</Alert>}
-        {success && <Alert severity="success">{success}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
 
         <Box
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          gap={2}
-          mt={3}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 3,
+            mt: 3,
+          }}
         >
           <Box
-            style={{
+            sx={{
               position: "relative",
               width: "100%",
-              maxWidth: "600px",
+              maxWidth: 600,
               aspectRatio: "16/9",
-              borderRadius: "12px",
+              borderRadius: 2,
               overflow: "hidden",
               border: "2px solid rgba(0,0,0,0.2)",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
             }}
           >
             <video
@@ -415,20 +516,32 @@ const FaceDetection = () => {
           <Stack direction="row" spacing={2}>
             <Button
               variant="contained"
-              color="primary"
               onClick={startCamera}
-              style={{ padding: "10px 20px" }}
+              sx={{
+                padding: "10px 20px",
+                fontWeight: "bold",
+                background: "linear-gradient(90deg, #42a5f5, #1976d2)",
+                "&:hover": {
+                  background: "linear-gradient(90deg, #1976d2, #42a5f5)",
+                },
+              }}
             >
-              Start Camera
+              Bắt đầu Camera
             </Button>
             <Button
               variant="contained"
-              color="secondary"
               onClick={stopCamera}
               disabled={!stream}
-              style={{ padding: "10px 20px" }}
+              sx={{
+                padding: "10px 20px",
+                fontWeight: "bold",
+                background: "linear-gradient(90deg, #ff6f61, #ff8a65)",
+                "&:hover": {
+                  background: "linear-gradient(90deg, #ff8a65, #ff6f61)",
+                },
+              }}
             >
-              Stop Camera
+              Dừng Camera
             </Button>
           </Stack>
 
@@ -436,43 +549,58 @@ const FaceDetection = () => {
             !isCheckinToday ? (
               <Button
                 variant="contained"
-                color="success"
                 onClick={handleCheckIn}
-                disabled={!isFaceInFrame || !nearCom || isOnLeave}
-                style={{
-                  padding: "10px 20px",
-                  marginTop: "10px",
+                disabled={
+                  !isFaceInFrame ||
+                  !nearCom ||
+                  isOnLeave ||
+                  isAutoCheckinRunning
+                }
+                sx={{
+                  padding: "12px 30px",
                   fontWeight: "bold",
+                  borderRadius: 2,
+                  mt: 2,
+                  background: "linear-gradient(90deg, #66bb6a, #43a047)",
+                  "&:hover": {
+                    background: "linear-gradient(90deg, #43a047, #66bb6a)",
+                  },
                 }}
               >
-                Check In
+                {isAutoCheckinRunning
+                  ? `Đang Check-In (${attemptCount}/10)`
+                  : "Chấm công vào"}
               </Button>
             ) : (
               <Button
                 variant="contained"
-                color="warning"
                 onClick={handleCheckout}
                 disabled={!isFaceInFrame || !nearCom || isOnLeave}
-                style={{
-                  padding: "10px 20px",
-                  marginTop: "10px",
+                sx={{
+                  padding: "12px 30px",
                   fontWeight: "bold",
+                  borderRadius: 2,
+                  mt: 2,
+                  background: "linear-gradient(90deg, #ffa726, #fb8c00)",
+                  "&:hover": {
+                    background: "linear-gradient(90deg, #fb8c00, #ffa726)",
+                  },
                 }}
               >
-                Check Out
+                Chấm công ra
               </Button>
             )
           ) : (
             <Typography
               variant="h6"
               align="center"
-              style={{
+              sx={{
                 color: "green",
-                marginTop: "20px",
+                mt: 3,
                 fontWeight: "bold",
               }}
             >
-              You have completed Check-In and Check-Out today!
+              Bạn đã hoàn thành chấm công trong ngày hôm nay
             </Typography>
           )}
         </Box>

@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
-import { getAttendanceHistory } from "../api/api"; // Import hàm API
-import { Container, Typography, Box, Chip, Paper } from "@mui/material";
-import AttendanceDetailsModal from "./AttendanceDetailsModal";
+import { getAttendanceHistory } from "../api/api";
+import {
+  Container,
+  Typography,
+  Box,
+  Chip,
+  Paper,
+  Stack,
+  Avatar,
+} from "@mui/material";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "../css/AttendanceCalendar.css"; // Tạo file CSS tùy chỉnh
+import AttendanceDetailsModal from "./AttendanceDetailsModal";
 
 const AttendanceCalendar = () => {
   const [date, setDate] = useState(new Date());
@@ -14,9 +22,9 @@ const AttendanceCalendar = () => {
   const token = localStorage.getItem("token");
 
   const fetchAttendanceHistory = async (startDate, endDate) => {
-    const userId = localStorage.getItem("userId");
+    const employee_id = localStorage.getItem("employeeId");
     const response = await getAttendanceHistory(
-      userId,
+      employee_id,
       startDate.toISOString().split("T")[0],
       endDate.toISOString().split("T")[0],
       token
@@ -26,16 +34,18 @@ const AttendanceCalendar = () => {
 
   useEffect(() => {
     const fetchAttendanceHistory = async () => {
-      const userId = localStorage.getItem("userId");
+      const employeeId = localStorage.getItem("employeeId");
       const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
       const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
       const response = await getAttendanceHistory(
-        userId,
+        employeeId,
         startDate.toISOString().split("T")[0],
         endDate.toISOString().split("T")[0],
         token
       );
       const records = Array.isArray(response) ? response : [];
+      console.log(employeeId);
+      console.log(records);
       setAttendanceRecords(records);
     };
     fetchAttendanceHistory();
@@ -58,11 +68,21 @@ const AttendanceCalendar = () => {
       const adjustedDate = new Date(date);
       adjustedDate.setDate(adjustedDate.getDate() + 1);
       const formattedDate = adjustedDate.toISOString().split("T")[0];
+      const today = new Date().toISOString().split("T")[0];
+
+      if (new Date(date).getDay() === 0 || new Date(date).getDay() === 6) {
+        return "tile-weekend";
+      }
+
       if (Array.isArray(attendanceRecords)) {
         const record = attendanceRecords.find((r) => r.date === formattedDate);
         if (record) {
           return record.finish ? "tile-finish-true" : "tile-finish-false";
         }
+      }
+
+      if (adjustedDate < new Date() && formattedDate < today) {
+        return "tile-missing";
       }
     }
     return null;
@@ -79,48 +99,74 @@ const AttendanceCalendar = () => {
   };
 
   return (
-    <Container maxWidth="md" style={{ marginTop: "20px" }}>
+    <Container maxWidth="lg" sx={{ mt: 5 }}>
       <Paper
-        style={{
-          padding: "20px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        elevation={4}
+        sx={{
+          p: 4,
+          borderRadius: 3,
+          background:
+            "linear-gradient(135deg, rgba(25,118,210,0.8), rgba(33,150,243,0.8))",
+          color: "#fff",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
         }}
       >
         <Box textAlign="center" mb={3}>
-          <Typography
-            variant="h4"
-            component="h1"
-            style={{ fontWeight: "bold", color: "#1976d2" }}
+          <Avatar
+            sx={{
+              bgcolor: "#4caf50",
+              width: 60,
+              height: 60,
+              mx: "auto",
+              mb: 2,
+            }}
           >
+            🗓️
+          </Avatar>
+          <Typography variant="h4" fontWeight="bold">
             Lịch Chấm Công
           </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Xem trạng thái chấm công của bạn theo từng ngày
+          <Typography variant="body1" color="text.secondary">
+            Theo dõi trạng thái chấm công hàng ngày của bạn
           </Typography>
         </Box>
 
-        <Box display="flex" justifyContent="center" mb={2}>
+        <Stack direction="row" spacing={2} justifyContent="center" mb={2}>
           <Chip
             label="Hoàn thành"
-            style={{
-              backgroundColor: "#4caf50",
+            sx={{
+              bgcolor: "#4caf50",
               color: "#fff",
-              marginRight: "8px",
+              fontWeight: "bold",
+              px: 2,
             }}
           />
           <Chip
             label="Chưa hoàn thành"
-            style={{ backgroundColor: "#f44336", color: "#fff" }}
+            sx={{
+              bgcolor: "#f44336",
+              color: "#fff",
+              fontWeight: "bold",
+              px: 2,
+            }}
           />
-        </Box>
+          <Chip
+            label="Cuối tuần"
+            sx={{
+              bgcolor: "#9e9e9e",
+              color: "#fff",
+              fontWeight: "bold",
+              px: 2,
+            }}
+          />
+        </Stack>
 
         <Calendar
           onChange={handleDateChange}
           onActiveStartDateChange={handleMonthChange}
           value={date}
           tileClassName={getTileClassName}
-          className="custom-calendar"
+          className="custom-calendar modern-calendar"
         />
       </Paper>
 

@@ -74,8 +74,7 @@ export const requestLeave = async (data, token) => {
   const response = await api.post("/request-leave", data, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  console.log(response.data);
-  return response.data;
+  return response;
 };
 
 export const getALLRequestLeave = async (token) => {
@@ -89,6 +88,20 @@ export const getALLRequestLeave = async (token) => {
 export const approveRequest = async (id, token) => {
   const response = await api.put(
     `/request-leave/approve/${id}`, // Endpoint API
+    {}, // Không cần body
+    {
+      headers: {
+        Authorization: `Bearer ${token}`, // Gửi JWT token trực tiếp trong headers
+      },
+    }
+  );
+  console.log(response);
+  return response.data;
+};
+
+export const approveRequestPaid = async (id, token) => {
+  const response = await api.put(
+    `/request-leave/approvepaidleave/${id}`, // Endpoint API
     {}, // Không cần body
     {
       headers: {
@@ -116,18 +129,18 @@ export const registerface = async (data, token) => {
     const response = await api.post("/users/register-face", data, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data; // Return response data
+    return response; // Return response data
   } catch (error) {
     // Handle error as needed
     console.error("Error registering face:", error);
     throw error; // rethrow the error to be handled by the caller
   }
 };
-export const checkIfOnLeave = async (userId, token) => {
+export const checkIfOnLeave = async (employeeId, token) => {
   try {
     const response = await api.get(`/request-leave/is-on-leave`, {
       headers: { Authorization: `Bearer ${token}` },
-      params: { userId },
+      params: { employeeId },
     });
     return response.data;
   } catch (error) {
@@ -154,11 +167,14 @@ export const hasCheckinToday = async (userId, token) => {
   }
 };
 
-export const checkCheckIntoday = async (userId, token) => {
+export const checkCheckIntoday = async (employee_id, token) => {
   try {
-    const response = await api.get(`/attendance/checkCheckinToday/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get(
+      `/attendance/checkCheckinToday/${employee_id}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     return response.data;
   } catch (error) {
     // Handle error as needed
@@ -222,6 +238,19 @@ export const updateEmployee = async (data, token) => {
 export const getAllEmployeeInfor = async (token) => {
   try {
     const response = await api.get(`/employee`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const getAllEmployeeInforAll = async (token) => {
+  try {
+    const response = await api.get(`/employee/all`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -320,7 +349,7 @@ export const registerFingerprints = async (data, token) => {
     const response = await api.post(`/users/register-fingerprint`, data, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data;
+    return response;
   } catch (error) {
     // Handle error as needed
     console.error("Error", error);
@@ -333,7 +362,7 @@ export const checkInFinger = async (data, userId, token) => {
     const response = await api.post(`/users/check-in-finger/${userId}`, data, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data;
+    return response;
   } catch (error) {
     // Handle error as needed
     console.error("Error", error);
@@ -346,7 +375,7 @@ export const checkOutFinger = async (data, userId, token) => {
     const response = await api.post(`/users/check-out-finger/${userId}`, data, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data;
+    return response;
   } catch (error) {
     // Handle error as needed
     console.error("Error", error);
@@ -365,6 +394,222 @@ export const checkTokenValidity = async (token) => {
     return false;
   } catch (error) {
     window.location.href = "/";
+    return false;
+  }
+};
+
+export const lockUser = async (userId, token) => {
+  try {
+    const response = await api.patch(`/users/${userId}/lock`, token, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 200) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    window.location.href = "/";
+    return false;
+  }
+};
+
+export const unlockUser = async (userId, token) => {
+  try {
+    const response = await api.patch(`/users/${userId}/unlock`, token, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 200) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    window.location.href = "/employee-table";
+    return false;
+  }
+};
+
+export const getFaceEmployeeByID = async (employeeId, token) => {
+  try {
+    const response = await api.get(`/employee-faces/all/${employeeId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const getAllEmployeeFace = async (employeeId, token) => {
+  try {
+    const response = await api.get(`/employee-faces`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const deleteEmployeeFace = async (id, token) => {
+  try {
+    const response = await api.delete(`/employee-faces/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const checkFaceEmployee = async (employeeId, token) => {
+  try {
+    const response = await api.get(`/employee-faces/check/${employeeId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const checkHasRequestLeave = async (token) => {
+  try {
+    const response = await api.get(
+      `/request-leave/check-have-requset-leaveunapproved`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const getRequestLeaveByDate = async (date, employeeId, token) => {
+  try {
+    const response = await api.get(
+      `/request-leave/date/${employeeId}?date=${date}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const getAllEmployeeFingerprint = async (employeeId, token) => {
+  try {
+    const response = await api.get(`/employee-fingerprint`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const deleteEmployeeFingerprint = async (id, token) => {
+  try {
+    const response = await api.delete(`/employee-fingerprint/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const getRequestLeaveById = async (employeeId, token) => {
+  try {
+    const response = await api.get(`/request-leave/employee/${employeeId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
+    return false;
+  }
+};
+
+export const updateRequestLeave = async (requestLeave, token) => {
+  try {
+    const response = await api.put(
+      `/request-leave/${requestLeave.id}`, // URL API
+      requestLeave, // Dữ liệu gửi làm request body
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating request leave:", error);
+    return false;
+  }
+};
+
+export const deleteRequestLeave = async (id, token) => {
+  try {
+    const response = await api.delete(
+      `/request-leave/${id}`, // URL API
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating request leave:", error);
+    return false;
+  }
+};
+
+export const checkOutOfTime = async (id, token) => {
+  try {
+    const response = await api.get(
+      `/request-leave/checkOutOfTime/${id}`, // URL API
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating request leave:", error);
+    return false;
+  }
+};
+
+export const getMonthSalary = async (employeeId, year, month, token) => {
+  try {
+    const response = await api.get(
+      `/monthly-salary/${employeeId}/${month}/${year}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response;
+  } catch (error) {
+    // Handle error as needed
+    console.error("Error", error);
     return false;
   }
 };

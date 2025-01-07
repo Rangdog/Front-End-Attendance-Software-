@@ -7,32 +7,58 @@ import {
   checkCheckIntoday,
   checkIfOnLeave,
 } from "../api/api";
-
+import CheckInModalFingerprint from "./CheckInModalFingerprint";
+import { useNavigate } from "react-router-dom";
 const AttendanceComponent = () => {
   const [selectedImage, setSelectedImage] = useState(null);
-  const token = localStorage.getItem("token"); // Assuming you store the token in localStorage
+  const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
-  const [file, setFile] = useState(null); // Lưu trữ file đã chọn
+  const employeeId = localStorage.getItem("employeeId");
+  const [file, setFile] = useState(null);
   const [attendance, setAttendance] = useState(null);
   const [isCheckinToday, setisCheckinToday] = useState(false);
   const [isFinish, setIsFinish] = useState(false);
   const [isOnLeave, setIsOnLeave] = useState(false);
-
+  const [message, setMessage] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [employeeName, setEmployeeName] = useState("");
+  const [checkinTime, setCheckinTime] = useState("");
+  const [title, setTitle] = useState("");
+  const navigate = useNavigate();
+  const handleCheckinSuccess = (name, time, title) => {
+    setEmployeeName(name);
+    setCheckinTime(time);
+    setTitle(title);
+    setOpenModal(true);
+  };
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    navigate("/attendance");
+  };
   const handleRegisterAttendance = async () => {
     if (!selectedImage) {
-      alert("No image selected!");
+      alert("Hình chưa được chọn");
       return;
     }
     const formData = new FormData();
     formData.append("fingerprint", file);
-    const response = await checkInFinger(formData, userId, token);
+    const response = await checkInFinger(formData, employeeId, token);
     console.log(response);
-    window.location.reload();
+    if (response.status === 200) {
+      const currentTime = new Date().toLocaleTimeString("vi-VN"); // Lấy giờ hiện tại
+      handleCheckinSuccess(
+        response.data.name,
+        currentTime,
+        "Chấm công vào thành công"
+      );
+    } else {
+      setMessage("Thất bại vui lòng thử lại");
+    }
   };
 
   const handleCheckout = async () => {
     if (!selectedImage) {
-      alert("No image selected!");
+      alert("Hình chưa được chọn");
       return;
     }
     const formData = new FormData();
@@ -42,25 +68,35 @@ const AttendanceComponent = () => {
     } else {
       return;
     }
-    const response = await checkOutFinger(formData, userId, token);
+    const response = await checkOutFinger(formData, employeeId, token);
     console.log(response);
-    window.location.reload();
+    if (response.status === 200) {
+      const currentTime = new Date().toLocaleTimeString("vi-VN"); // Lấy giờ hiện tại
+      handleCheckinSuccess(
+        response.data.name,
+        currentTime,
+        "Chấm công ra thành công"
+      );
+    } else {
+      setMessage("Thất bại vui lòng thử lại");
+    }
   };
 
   const handleImageChange = (e) => {
-    setFile(event.target.files[0]);
+    setFile(e.target.files[0]);
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result); // Set the image data URL
+        setSelectedImage(reader.result);
       };
       reader.readAsDataURL(file);
     }
   };
+
   useEffect(() => {
     const fetchData = async () => {
-      const data = await checkCheckIntoday(userId, token); // Dùng await để chờ kết quả từ API
+      const data = await checkCheckIntoday(employeeId, token);
       if (data === "") {
         return;
       }
@@ -72,17 +108,17 @@ const AttendanceComponent = () => {
         setIsFinish(true);
       }
     };
+    fetchData();
+  }, []);
 
-    fetchData(); // Gọi hàm bất đồng bộ để lấy dữ liệu
-  }, []); // Thêm dependencies để hàm chạy lại khi userId hoặc token thay đổi
   useEffect(() => {
     const fetchData = async () => {
-      const data = await checkIfOnLeave(userId, token); // Dùng await để chờ kết quả từ API
+      const data = await checkIfOnLeave(employeeId, token);
       setIsOnLeave(data);
     };
+    fetchData();
+  }, []);
 
-    fetchData(); // Gọi hàm bất đồng bộ để lấy dữ liệu
-  }, []); // Thêm dependencies để hàm chạy lại khi userId hoặc token thay đổi
   return (
     <Box
       sx={{
@@ -90,36 +126,42 @@ const AttendanceComponent = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: "#f5f5f5",
-        borderRadius: "15px",
-        padding: 4,
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-        width: "300px",
-        margin: "0 auto",
+        background: "linear-gradient(135deg, #e0f7fa, #ffffff)",
+        borderRadius: "20px",
+        padding: "30px",
+        boxShadow: "0 8px 20px rgba(0, 0, 0, 0.2)",
+        width: "350px",
+        margin: "40px auto",
         textAlign: "center",
       }}
     >
+      <CheckInModalFingerprint
+        open={openModal}
+        handleClose={handleCloseModal}
+        name={employeeName}
+        time={checkinTime}
+        title={title}
+      />
       <Typography
         sx={{
           fontSize: "24px",
           fontWeight: "bold",
           marginBottom: 2,
-          color: "#333",
+          color: "#1976d2",
         }}
       >
-        Fingerprint Attendance
+        Chấm công bằng vân tay
       </Typography>
 
-      {/* Display image preview if selected */}
       {selectedImage && (
         <Box
           sx={{
             width: "100%",
-            height: "300px",
-            marginBottom: 2,
-            borderRadius: "10px",
+            height: "250px",
+            marginBottom: "20px",
+            borderRadius: "15px",
             overflow: "hidden",
-            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
           }}
         >
           <img
@@ -134,7 +176,6 @@ const AttendanceComponent = () => {
         </Box>
       )}
 
-      {/* Input file for image */}
       <input
         type="file"
         accept="image/*"
@@ -147,71 +188,77 @@ const AttendanceComponent = () => {
           fontSize: "16px",
           width: "100%",
           textAlign: "center",
+          background: "#f0f8ff",
+          cursor: "pointer",
         }}
       />
 
-      {/* Mark Attendance Button */}
       {!isFinish ? (
-        // Kiểm tra nếu isFinish là false
         !isCheckinToday ? (
           <Button
             variant="contained"
-            onClick={handleRegisterAttendance} // Thực hiện Check In
-            disabled={isOnLeave} // Disabled nếu không thỏa điều kiện
+            onClick={handleRegisterAttendance}
+            disabled={isOnLeave}
             sx={{
-              backgroundColor: "#1976d2",
+              background: "linear-gradient(90deg, #1976d2, #42a5f5)",
               color: "white",
               fontSize: "16px",
               fontWeight: "bold",
-              padding: 2,
+              padding: "10px 20px",
+              borderRadius: "8px",
               "&:hover": {
-                backgroundColor: "#1565c0",
+                background: "linear-gradient(90deg, #42a5f5, #1976d2)",
               },
               marginTop: "10px",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Typography>Check In</Typography>
-            </Box>
+            <FingerprintIcon sx={{ marginRight: "8px" }} />
+            Chấm công vào
           </Button>
         ) : (
           <Button
             variant="contained"
-            onClick={handleCheckout} // Thực hiện Check Out
-            disabled={isOnLeave} // Disabled nếu không thỏa điều kiện
+            onClick={handleCheckout}
+            disabled={isOnLeave}
             sx={{
-              backgroundColor: "#1976d2",
+              background: "linear-gradient(90deg, #ff8a65, #ff7043)",
               color: "white",
               fontSize: "16px",
               fontWeight: "bold",
-              padding: 2,
+              padding: "10px 20px",
+              borderRadius: "8px",
               "&:hover": {
-                backgroundColor: "#1565c0",
+                background: "linear-gradient(90deg, #ff7043, #ff8a65)",
               },
               marginTop: "10px",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Typography>Check Out</Typography>
-            </Box>
+            <FingerprintIcon sx={{ marginRight: "8px" }} />
+            Chấm công ra
           </Button>
         )
       ) : (
-        // Nếu isFinish là true, hiển thị thông báo đã hoàn thành
-        <Typography variant="body1" sx={{ marginTop: "10px" }}>
-          Bạn đã hoàn thành Check In và Check Out hôm nay
+        <Typography
+          variant="body1"
+          sx={{
+            marginTop: "20px",
+            color: "green",
+            fontWeight: "bold",
+          }}
+        >
+          Bạn đã hoàn thành chấm công hôm nay
+        </Typography>
+      )}
+      {message && (
+        <Typography
+          variant="body1"
+          sx={{
+            marginTop: 3,
+            color: message.includes("thành công") ? "green" : "red",
+            textAlign: "center",
+          }}
+        >
+          {message}
         </Typography>
       )}
     </Box>
